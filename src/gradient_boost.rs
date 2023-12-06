@@ -797,8 +797,13 @@ impl GBDT {
         // load trees
         for node in nodes.iter() {
             let tree = DecisionTree::get_from_xgboost(node)?;
+            gbdt.conf.feature_size = tree.feature_size;
+            gbdt.conf.max_depth = tree.max_depth;
+            println!("{}", gbdt.conf.to_string());
+
             gbdt.trees.push(tree);
         }
+
         Ok(gbdt)
     }
 }

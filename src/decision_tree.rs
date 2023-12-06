@@ -930,9 +930,9 @@ pub struct DecisionTree {
     /// the tree
     tree: BinaryTree<DTNode>,
     /// the size of feautures. Training data and test data should have same feature size.
-    feature_size: usize,
+    pub(crate) feature_size: usize,
     /// the max depth of the decision tree. The root node is considered to be in the layer 0.
-    max_depth: u32,
+    pub(crate) max_depth: u32,
     /// the minimum number of samples required to be at a leaf node during training.
     min_leaf_size: usize,
     /// the loss function type.
@@ -1778,19 +1778,19 @@ impl DecisionTree {
                 let feature_index = match node["split"].as_i64() {
                     Some(v) => v,
                     None => {
-                        let feature_name = node["split"]
-                            .as_str()
-                            .ok_or("parse 'split' error")?;
+                        let feature_name = node["split"].as_str().ok_or("parse 'split' error")?;
                         let feature_str: String = feature_name.chars().skip(3).collect();
                         feature_str.parse::<i64>()?
                     }
                 };
                 node_ref.value.feature_index = feature_index as usize;
+                self.feature_size = std::cmp::max(feature_index as usize + 1, self.feature_size);
+
+                let depth = node["depth"].as_i64().ok_or("parse 'depth' error")?;
+                self.max_depth = std::cmp::max(depth as u32 + 1 /* respect leaf */, self.max_depth);
 
                 // handle unknown feature
-                let missing = node["missing"]
-                    .as_i64()
-                    .ok_or("parse 'missing' error")?;
+                let missing = node["missing"].as_i64().ok_or("parse 'missing' error")?;
                 let left_child = node["yes"].as_i64().ok_or("parse 'yes' error")?;
                 let right_child = node["no"].as_i64().ok_or("parse 'no' error")?;
                 if missing == left_child {
@@ -1812,9 +1812,7 @@ impl DecisionTree {
         let mut find_left = false;
         let mut find_right = false;
         for child in children.iter() {
-            let node_id = child["nodeid"]
-                .as_i64()
-                .ok_or("parse 'nodeid' error")?;
+            let node_id = child["nodeid"].as_i64().ok_or("parse 'nodeid' error")?;
 
             // build left child
             if node_id == left_child {
